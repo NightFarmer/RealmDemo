@@ -1,28 +1,33 @@
 package com.nightfarmer.realmdemo;
 
+import android.os.Bundle;
 import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 
 import com.nightfarmer.realmdemo.bean.Dog;
 import com.nightfarmer.realmdemo.bean.Person;
+import com.nightfarmer.realmdemo.rxrealm.RealmFindList;
+import com.nightfarmer.realmdemo.rxrealm.RealmFindObj;
+import com.nightfarmer.realmdemo.rxrealm.RealmListOnSubscribe;
 import com.nightfarmer.realmdemo.rxrealm.RxRealm;
+import com.nightfarmer.realmdemo.rxrealm.RxRealmResult;
+import com.nightfarmer.realmdemo.rxrealm.RxRealmResultList;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import io.realm.Realm;
-import io.realm.RealmChangeListener;
 import io.realm.RealmConfiguration;
-import io.realm.RealmObject;
+import io.realm.RealmModel;
 import io.realm.RealmResults;
 import rx.Observable;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.schedulers.Schedulers;
@@ -53,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         createObjects();
-        initListener();
+//        initListener();
     }
 
     private void initListener() {
@@ -84,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < 1000; i++) {
             Person e = new Person();
             e.setId(i + count * 1000);
-            e.setName("hehe" + (i + count * 1000));
+            e.setName("person-" + (i + count * 1000));
             users.add(e);
         }
         count++;
@@ -106,21 +111,165 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    Subscription xx = null;
+    Subscription subscription = null;
 
+    /**
+     * 后台查询, 并将分离Realm后的数据传回前台, 并持续监听直至unsubscribe
+     *
+     * @param view
+     */
+    public void findAllPersonAndListen(View view) {
+//        if (subscription1 != null && !subscription1.isUnsubscribed()) {
+//            print("监听未停止,取上次结果即可");
+//            return;
+//        }
+        subscription1 = RxRealm
+                .listAndListen(new RealmFindList<Person>() {
+                    @Override
+                    public RealmResults<Person> call(Realm realm) {
+//                        return realm.where(Person.class).findAllAsync();
+                        return realm.where(Person.class).findAll();
+                    }
+                })
+                .map(new Func1<RxRealmResultList<Person>, List<Person>>() {
+                    @Override
+                    public List<Person> call(RxRealmResultList<Person> personRxRealmResultList) {
+                        return personRxRealmResultList.realm.copyFromRealm(personRxRealmResultList.list);
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Action1<List<Person>>() {
+                    @Override
+                    public void call(List<Person> personRxRealmResultList) {
+                        print("Person数量" + personRxRealmResultList.size() + " thread:" + Thread.currentThread().getName());
+                    }
+                });
+    }
+
+    Subscription subscription1;//findAllPersonAndListen的监听
+
+    /**
+     * 取消findAllPersonAndListen方法的监听
+     *
+     * @param view
+     */
+    public void unSubscribe1(View view) {
+        if (subscription1 != null && !subscription1.isUnsubscribed()) {
+            subscription1.unsubscribe();
+        }
+    }
+
+    /**
+     * 后台查询, 并将分离Realm后的数据传回前台, 查询后关闭realm
+     *
+     * @param view
+     */
     public void findAllPerson(View view) {
-        RxRealm.find(new RxRealm.XX<Person>() {
-            @Override
-            public Person invoke(Realm realm) {
-                return realm.where(Person.class).findFirst();
 
-            }
-        }).subscribe(new Action1<Person>() {
+        subscription1 = RxRealm.list(new RealmFindList<Person>() {
             @Override
-            public void call(Person person) {
-                Log.i("xx", "" + person.getName());
+            public RealmResults<Person> call(Realm realm) {
+//                        return realm.where(Person.class).findAllAsync();
+                return realm.where(Person.class).findAll();
+            }
+        })
+                .map(new Func1<RxRealmResultList<Person>, List<Person>>() {
+                    @Override
+                    public List<Person> call(RxRealmResultList<Person> personRxRealmResultList) {
+                        return personRxRealmResultList.realm.copyFromRealm(personRxRealmResultList.list);
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Action1<List<Person>>() {
+                    @Override
+                    public void call(List<Person> personRxRealmResultList) {
+                        print("Person数量" + personRxRealmResultList.size() + " thread:" + Thread.currentThread().getName());
+                    }
+                });
+    }
+
+    public void a(View v) {
+        realm.executeTransaction(new Realm.Transaction() {
+            @Override
+            public void execute(Realm realm) {
+                Person first = realm.where(Person.class).findFirst();
+                first.setName("aaa");
+
             }
         });
+    }
+
+    public void b(View v) {
+        realm.executeTransaction(new Realm.Transaction() {
+            @Override
+            public void execute(Realm realm) {
+
+                Person first = realm.where(Person.class).findFirst();
+                first.setName("bbb");
+            }
+        });
+    }
+
+    public void c(View v) {
+        if (subscription != null && !subscription.isUnsubscribed()) {
+            subscription.unsubscribe();
+        }
+    }
+
+    public void findAllPerson3(View view) {
+
+//        Observable
+//                .create(new RealmListOnSubscribe<>(new RealmFindList<Person>() {
+//                    @Override
+//                    public RealmResults<Person> call(Realm realm) {
+//                        Log.i("myLogRealm执行", "调度线程:" + Thread.currentThread().getName());
+//                        return realm.where(Person.class).findAll();
+//                    }
+//                }))
+//                .map(new Func1<RxRealmResultList<Person>, List<Person>>() {
+//                    @Override
+//                    public List<Person> call(RxRealmResultList<Person> personRxRealmResultList) {
+//                        return personRxRealmResultList.realm.copyFromRealm(personRxRealmResultList.list);
+//                    }
+//                })
+//                .subscribeOn(Schedulers.io())
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .subscribe(new Action1<List<Person>>() {
+//                    @Override
+//                    public void call(List<Person> persons) {
+//                        Log.i("myLog请求列表", "结果线程:" + Thread.currentThread().getName() + "__" + "结果: " + persons.size());
+//                    }
+//                });
+
+//        Observable
+//                .create(RxRealm.find(new RealmFindObj<Person>() {
+//                    @Override
+//                    public Person call(Realm realm) {
+//                        return realm.where(Person.class).findFirst();
+//                    }
+//                }))
+//                .map(new Func1<RxRealmResult<Person>, Person>() {
+//                    @Override
+//                    public Person call(RxRealmResult<Person> personRxRealmResult) {
+//                        return personRxRealmResult.realm.copyFromRealm(personRxRealmResult.obj);
+//                    }
+//                })
+//                .subscribeOn(Schedulers.io())
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .subscribe(new Action1<Person>() {
+//                    @Override
+//                    public void call(Person person) {
+//                        Log.i("myLog请求对象", "结果线程:" + Thread.currentThread().getName() + "  " + person.getName());
+//                    }
+//                }, new Action1<Throwable>() {
+//                    @Override
+//                    public void call(Throwable throwable) {
+//                        throwable.printStackTrace();
+//                    }
+//                });
+
     }
 
     public void findAllPerson2(View view) {
@@ -178,6 +327,16 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public void print(Object... datas) {
+        if (datas == null) return;
+        String str = "";
+        for (Object data : datas) {
+            str += data + "\n";
+        }
+        str += "----------------\n";
+        console.append(str);
+    }
+
     public void clear(View view) {
         console.setText("");
     }
@@ -185,30 +344,33 @@ public class MainActivity extends AppCompatActivity {
     ArrayList<Person> users = new ArrayList<>();
 
     public void insertMany(final View v) {
-        Log.i("xx", realm.getPath());
+        Log.i("myLog", realm.getPath());
         createObjects();
 
-
-        realm.executeTransactionAsync(new Realm.Transaction() {
+        realm.executeTransaction(new Realm.Transaction() {
             @Override
             public void execute(Realm realm) {
                 realm.copyToRealmOrUpdate(users);
-//                RealmResults<Person> all = realm.where(Person.class).findAll();
-//                ((Button) v).setText("" + all.size());
-            }
-        }, new Realm.Transaction.OnSuccess() {
-            @Override
-            public void onSuccess() {
-                console.append("成功插入1000条Person.\n");
-//                console.append("" + realm.where(Person.class).findAll().size());
-            }
-        }, new Realm.Transaction.OnError() {
-            @Override
-            public void onError(Throwable error) {
-                error.printStackTrace();
-                console.append("数据插入失败.\n");
             }
         });
+
+//        realm.executeTransactionAsync(new Realm.Transaction() {
+//            @Override
+//            public void execute(Realm realm) {
+//                realm.copyToRealmOrUpdate(users);
+//            }
+//        }, new Realm.Transaction.OnSuccess() {
+//            @Override
+//            public void onSuccess() {
+//                console.append("成功插入1000条Person.\n");
+//            }
+//        }, new Realm.Transaction.OnError() {
+//            @Override
+//            public void onError(Throwable error) {
+//                error.printStackTrace();
+//                console.append("数据插入失败.\n");
+//            }
+//        });
     }
 
 
@@ -259,14 +421,14 @@ public class MainActivity extends AppCompatActivity {
 
         for (int i = 0; i < age.size(); i++) {
             Person user = age.get(i);
-            Log.i("xx", user.getName() + "__" + user.getId());
+            Log.i("myLog", user.getName() + "__" + user.getId());
         }
 
         Dog first = realm.where(Dog.class).equalTo("name", "小白").findFirst();
-        Log.i("xx", first.woner.getName());
+        Log.i("myLog", first.woner.getName());
 
         Dog first1 = realm.where(Dog.class).equalTo("woner.age", 23).findFirst();
-        Log.i("xx", first1.name);
+        Log.i("myLog", first1.name);
 
         Realm defaultInstance = realm;
         defaultInstance.beginTransaction();

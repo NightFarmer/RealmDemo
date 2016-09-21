@@ -39,13 +39,42 @@
             <Button
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:onClick="findAllPersonAndListen"
+                android:text="查询监听Person" />
+            <Button
+                android:text="取消监听"
+                android:onClick="unSubscribe1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:onClick="findAllPerson"
-                android:text="查询Person" />
+                android:text="查询一次Person" />
 
             <Button
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="查询Dog" />
+
+
+            <Button
+                android:onClick="a"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="a" />
+
+            <Button
+                android:onClick="b"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="b" />
+
+            <Button
+                android:onClick="c"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="c" />
         </LinearLayout>
 
     </ScrollView>
