@@ -4,7 +4,9 @@ import android.util.Log;
 
 import io.realm.RealmModel;
 import rx.Observable;
+import rx.Scheduler;
 import rx.functions.Action0;
+import rx.schedulers.Schedulers;
 
 /**
  * Created by zhangfan on 16-9-20.
@@ -62,4 +64,7 @@ public class RxRealm {
         return createListObservable(realmFindList, true);
     }
 
+    public static Scheduler ioScheduler(){
+        return Schedulers.newThread();
+    }
 }

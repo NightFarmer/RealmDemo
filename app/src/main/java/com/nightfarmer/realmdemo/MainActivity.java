@@ -10,24 +10,17 @@ import android.widget.TextView;
 import com.nightfarmer.realmdemo.bean.Dog;
 import com.nightfarmer.realmdemo.bean.Person;
 import com.nightfarmer.realmdemo.rxrealm.RealmFindList;
-import com.nightfarmer.realmdemo.rxrealm.RealmFindObj;
-import com.nightfarmer.realmdemo.rxrealm.RealmListOnSubscribe;
 import com.nightfarmer.realmdemo.rxrealm.RxRealm;
-import com.nightfarmer.realmdemo.rxrealm.RxRealmResult;
 import com.nightfarmer.realmdemo.rxrealm.RxRealmResultList;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import io.realm.Realm;
 import io.realm.RealmConfiguration;
-import io.realm.RealmModel;
 import io.realm.RealmResults;
-import rx.Observable;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
-import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.schedulers.Schedulers;
@@ -119,10 +112,10 @@ public class MainActivity extends AppCompatActivity {
      * @param view
      */
     public void findAllPersonAndListen(View view) {
-//        if (subscription1 != null && !subscription1.isUnsubscribed()) {
-//            print("监听未停止,取上次结果即可");
-//            return;
-//        }
+        if (subscription1 != null && !subscription1.isUnsubscribed()) {
+            print("监听未停止,取上次结果即可");
+            return;
+        }
         subscription1 = RxRealm
                 .listAndListen(new RealmFindList<Person>() {
                     @Override
@@ -137,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
                         return personRxRealmResultList.realm.copyFromRealm(personRxRealmResultList.list);
                     }
                 })
-                .subscribeOn(Schedulers.io())
+                .subscribeOn(RxRealm.ioScheduler())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Action1<List<Person>>() {
                     @Override
@@ -167,20 +160,21 @@ public class MainActivity extends AppCompatActivity {
      */
     public void findAllPerson(View view) {
 
-        subscription1 = RxRealm.list(new RealmFindList<Person>() {
-            @Override
-            public RealmResults<Person> call(Realm realm) {
+        subscription1 = RxRealm
+                .list(new RealmFindList<Person>() {
+                    @Override
+                    public RealmResults<Person> call(Realm realm) {
 //                        return realm.where(Person.class).findAllAsync();
-                return realm.where(Person.class).findAll();
-            }
-        })
+                        return realm.where(Person.class).findAll();
+                    }
+                })
                 .map(new Func1<RxRealmResultList<Person>, List<Person>>() {
                     @Override
                     public List<Person> call(RxRealmResultList<Person> personRxRealmResultList) {
                         return personRxRealmResultList.realm.copyFromRealm(personRxRealmResultList.list);
                     }
                 })
-                .subscribeOn(Schedulers.io())
+                .subscribeOn(RxRealm.ioScheduler())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Action1<List<Person>>() {
                     @Override

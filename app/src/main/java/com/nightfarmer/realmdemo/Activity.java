@@ -8,6 +8,10 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+
 import io.realm.Realm;
 import io.realm.RealmChangeListener;
 import io.realm.RealmResults;
@@ -80,7 +84,20 @@ public class Activity extends AppCompatActivity {
                         });
                     }
                 })
-                .subscribeOn(Schedulers.io())
+                .subscribeOn(Schedulers.newThread())
+//                .subscribeOn(Schedulers.io())
+//                .subscribeOn(Schedulers.from(new Executor() {
+//                    @Override
+//                    public void execute(Runnable runnable) {
+//
+//                    }
+//                }))
+//                .subscribeOn(Schedulers.from(Executors.newSingleThreadExecutor(new ThreadFactory() {
+//                    @Override
+//                    public Thread newThread(Runnable r) {
+//                        return null;
+//                    }
+//                })))
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Action1<String>() {
                     @Override
